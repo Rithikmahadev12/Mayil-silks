@@ -3,57 +3,23 @@ require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
 const multer = require('multer');
-const fs = require('fs');
 const path = require('path');
+const db = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const DATA_DIR = path.join(__dirname, 'data');
-const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
-const PRODUCTS_FILE = path.join(DATA_DIR, 'products.json');
-const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
-
-// Make sure required folders/files exist (important on first deploy)
-[DATA_DIR, UPLOADS_DIR].forEach((dir) => {
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+// Images are handled in memory, then streamed straight to Supabase Storage —
+// nothing is written to local disk, so it survives redeploys.
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 8 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (allowed.includes(file.mimetype)) cb(null, true);
+    else cb(new Error('Only image files are allowed (jpg, png, webp, gif).'));
+  },
 });
-if (!fs.existsSync(PRODUCTS_FILE)) fs.writeFileSync(PRODUCTS_FILE, '[]');
-if (!fs.existsSync(SETTINGS_FILE)) {
-  fs.writeFileSync(
-    SETTINGS_FILE,
-    JSON.stringify(
-      {
-        storeName: 'MayilSilks',
-        tagline: 'Sarees & Clothing, Handpicked with Love',
-        address: '',
-        phone: '',
-        website: '',
-        status: 'Open',
-        hours: '',
-        mapsUrl: '',
-        about: '',
-      },
-      null,
-      2
-    )
-  );
-}
-
-
-function readProducts() {
-  return JSON.parse(fs.readFileSync(PRODUCTS_FILE, 'utf-8'));
-}
-function writeProducts(products) {
-  fs.writeFileSync(PRODUCTS_FILE, JSON.stringify(products, null, 2));
-}
-function readSettings() {
-  return JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
-}
-function writeSettings(settings) {
-  fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2));
-}
-
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -76,32 +42,39 @@ function requireAdmin(req, res, next) {
   return res.redirect('/admin/login');
 }
 
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOADS_DIR),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const safeName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
-    cb(null, safeName);
-  },
-});
-function fileFilter(req, file, cb) {
-  const allowed = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
-  const ext = path.extname(file.originalname).toLowerCase();
-  if (allowed.includes(ext)) cb(null, true);
-  else cb(new Error('Only image files are allowed (jpg, png, webp, gif).'));
-}
-const upload = multer({ storage, fileFilter, limits: { fileSize: 8 * 1024 * 1024 } });
-
-
-
-app.get('/', (req, res) => {
-  const products = readProducts().sort((a, b) => b.createdAt - a.createdAt);
-  const settings = readSettings();
-  res.render('index', { products, settings });
+// If Supabase isn't configured yet, show a clear setup message instead of a stack trace.
+// (Admin login/logout don't touch the database, so they're allowed through.)
+const SUPABASE_EXEMPT_PATHS = ['/admin/login', '/admin/logout'];
+app.use((req, res, next) => {
+  if (SUPABASE_EXEMPT_PATHS.includes(req.path)) return next();
+  if (!db.isConfigured()) {
+    return res.status(500).send(
+      `<div style="font-family:sans-serif; max-width:640px; margin:60px auto; line-height:1.6;">
+        <h1>Setup needed</h1>
+        <p>${db.configError()}</p>
+        <p>See the README for the Supabase setup steps (create the project, run the SQL, add the environment variables).</p>
+      </div>`
+    );
+  }
+  next();
 });
 
+// ======================================================
+// PUBLIC ROUTES
+// ======================================================
 
+app.get('/', async (req, res, next) => {
+  try {
+    const [products, settings] = await Promise.all([db.getProducts(), db.getSettings()]);
+    res.render('index', { products, settings });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ======================================================
+// ADMIN AUTH ROUTES
+// ======================================================
 
 app.get('/admin/login', (req, res) => {
   res.render('admin-login', { error: null });
@@ -123,113 +96,154 @@ app.get('/admin/logout', (req, res) => {
   req.session.destroy(() => res.redirect('/admin/login'));
 });
 
+// ======================================================
+// ADMIN DASHBOARD ROUTES (protected)
+// ======================================================
 
-
-app.get('/admin', requireAdmin, (req, res) => {
-  const products = readProducts().sort((a, b) => b.createdAt - a.createdAt);
-  const settings = readSettings();
-  res.render('admin-dashboard', {
-    products,
-    settings,
-    message: req.query.message || null,
-    error: req.query.error || null,
-  });
+app.get('/admin', requireAdmin, async (req, res, next) => {
+  try {
+    const [products, settings] = await Promise.all([db.getProducts(), db.getSettings()]);
+    res.render('admin-dashboard', {
+      products,
+      settings,
+      message: req.query.message || null,
+      error: req.query.error || null,
+    });
+  } catch (err) {
+    next(err);
+  }
 });
 
 // Add a new product/saree
-app.post('/admin/products', requireAdmin, (req, res) => {
-  upload.single('image')(req, res, (err) => {
+app.post('/admin/products', requireAdmin, (req, res, next) => {
+  upload.single('image')(req, res, async (err) => {
     if (err) return res.redirect(`/admin?error=${encodeURIComponent(err.message)}`);
 
-    const { name, price, description } = req.body;
-    if (!name || !req.file) {
-      return res.redirect(`/admin?error=${encodeURIComponent('Name and image are required.')}`);
-    }
+    try {
+      const { name, price, description } = req.body;
+      if (!name || !req.file) {
+        return res.redirect(
+          `/admin?error=${encodeURIComponent('Name and photo are required.')}`
+        );
+      }
 
-    const products = readProducts();
-    const newProduct = {
-      id: Date.now().toString(),
-      name: name.trim(),
-      price: price ? price.trim() : '',
-      description: description ? description.trim() : '',
-      image: `/uploads/${req.file.filename}`,
-      createdAt: Date.now(),
-    };
-    products.push(newProduct);
-    writeProducts(products);
-    res.redirect(`/admin?message=${encodeURIComponent('Saree added successfully.')}`);
+      const { url, path: imagePath } = await db.uploadImage(
+        req.file.buffer,
+        req.file.originalname,
+        req.file.mimetype
+      );
+
+      await db.createProduct({
+        name: name.trim(),
+        price: price ? price.trim() : '',
+        description: description ? description.trim() : '',
+        imageUrl: url,
+        imagePath,
+      });
+
+      res.redirect(`/admin?message=${encodeURIComponent('Saree added successfully.')}`);
+    } catch (e) {
+      next(e);
+    }
   });
 });
 
 // Edit product form
-app.get('/admin/products/:id/edit', requireAdmin, (req, res) => {
-  const products = readProducts();
-  const product = products.find((p) => p.id === req.params.id);
-  if (!product) return res.redirect(`/admin?error=${encodeURIComponent('Product not found.')}`);
-  res.render('admin-edit', { product });
+app.get('/admin/products/:id/edit', requireAdmin, async (req, res, next) => {
+  try {
+    const product = await db.getProduct(req.params.id);
+    res.render('admin-edit', { product });
+  } catch (err) {
+    res.redirect(`/admin?error=${encodeURIComponent('Product not found.')}`);
+  }
 });
 
 // Update product
-app.post('/admin/products/:id', requireAdmin, (req, res) => {
-  upload.single('image')(req, res, (err) => {
+app.post('/admin/products/:id', requireAdmin, (req, res, next) => {
+  upload.single('image')(req, res, async (err) => {
     if (err) return res.redirect(`/admin?error=${encodeURIComponent(err.message)}`);
 
-    const products = readProducts();
-    const idx = products.findIndex((p) => p.id === req.params.id);
-    if (idx === -1) {
-      return res.redirect(`/admin?error=${encodeURIComponent('Product not found.')}`);
+    try {
+      const existing = await db.getProduct(req.params.id);
+      const { name, price, description } = req.body;
+
+      const fields = {
+        name: name ? name.trim() : existing.name,
+        price: price !== undefined ? price.trim() : existing.price,
+        description: description !== undefined ? description.trim() : existing.description,
+      };
+
+      if (req.file) {
+        const { url, path: imagePath } = await db.uploadImage(
+          req.file.buffer,
+          req.file.originalname,
+          req.file.mimetype
+        );
+        fields.image_url = url;
+        fields.image_path = imagePath;
+        // Remove the old photo now that the new one is stored
+        if (existing.image_path) {
+          db.deleteImage(existing.image_path).catch(() => {});
+        }
+      }
+
+      await db.updateProduct(req.params.id, fields);
+      res.redirect(`/admin?message=${encodeURIComponent('Saree updated successfully.')}`);
+    } catch (e) {
+      next(e);
     }
-
-    const { name, price, description } = req.body;
-    products[idx].name = name ? name.trim() : products[idx].name;
-    products[idx].price = price !== undefined ? price.trim() : products[idx].price;
-    products[idx].description =
-      description !== undefined ? description.trim() : products[idx].description;
-
-    if (req.file) {
-      const oldImagePath = path.join(__dirname, 'public', products[idx].image);
-      if (fs.existsSync(oldImagePath)) fs.unlinkSync(oldImagePath);
-      products[idx].image = `/uploads/${req.file.filename}`;
-    }
-
-    writeProducts(products);
-    res.redirect(`/admin?message=${encodeURIComponent('Saree updated successfully.')}`);
   });
 });
 
 // Delete product
-app.post('/admin/products/:id/delete', requireAdmin, (req, res) => {
-  const products = readProducts();
-  const idx = products.findIndex((p) => p.id === req.params.id);
-  if (idx === -1) {
-    return res.redirect(`/admin?error=${encodeURIComponent('Product not found.')}`);
+app.post('/admin/products/:id/delete', requireAdmin, async (req, res, next) => {
+  try {
+    const existing = await db.getProduct(req.params.id);
+    await db.deleteProduct(req.params.id);
+    if (existing && existing.image_path) {
+      db.deleteImage(existing.image_path).catch(() => {});
+    }
+    res.redirect(`/admin?message=${encodeURIComponent('Saree removed.')}`);
+  } catch (err) {
+    next(err);
   }
-  const [removed] = products.splice(idx, 1);
-  const imagePath = path.join(__dirname, 'public', removed.image);
-  if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
-  writeProducts(products);
-  res.redirect(`/admin?message=${encodeURIComponent('Saree removed.')}`);
 });
 
-// Update store settings (address, phone, status, etc.)
-app.post('/admin/settings', requireAdmin, (req, res) => {
-  const { storeName, tagline, address, phone, website, status, hours, mapsUrl, about } = req.body;
-  const settings = {
-    storeName: storeName || '',
-    tagline: tagline || '',
-    address: address || '',
-    phone: phone || '',
-    website: website || '',
-    status: status || '',
-    hours: hours || '',
-    mapsUrl: mapsUrl || '',
-    about: about || '',
-  };
-  writeSettings(settings);
-  res.redirect(`/admin?message=${encodeURIComponent('Store info updated.')}`);
+// Update store settings
+app.post('/admin/settings', requireAdmin, async (req, res, next) => {
+  try {
+    const { storeName, tagline, address, phone, website, status, hours, mapsUrl, about } =
+      req.body;
+    await db.updateSettings({
+      store_name: storeName || '',
+      tagline: tagline || '',
+      address: address || '',
+      phone: phone || '',
+      website: website || '',
+      status: status || '',
+      hours: hours || '',
+      maps_url: mapsUrl || '',
+      about: about || '',
+    });
+    res.redirect(`/admin?message=${encodeURIComponent('Store info updated.')}`);
+  } catch (err) {
+    next(err);
+  }
 });
 
+// ---------- Error handler ----------
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).send(
+    `<div style="font-family:sans-serif; max-width:640px; margin:60px auto; line-height:1.6;">
+      <h1>Something went wrong</h1>
+      <p>${err.message || 'Unknown error'}</p>
+      <p><a href="/">Go home</a></p>
+    </div>`
+  );
+});
 
+// ---------- 404 ----------
 app.use((req, res) => {
   res.status(404).send('Page not found. <a href="/">Go home</a>');
 });
