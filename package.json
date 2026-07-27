@@ -1,7 +1,7 @@
 {
   "name": "mayilsilks",
   "version": "1.0.0",
-  "description": "MayilSilks - saree & clothing store",
+  "description": "MayilSilks - saree & clothing store website with admin panel",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -10,6 +10,7 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
     "dotenv": "^16.4.5",
     "ejs": "^3.1.10",
     "express": "^4.19.2",
