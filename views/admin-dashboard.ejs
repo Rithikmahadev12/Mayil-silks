@@ -11,11 +11,12 @@
   <header class="site-header">
     <div class="header-inner">
       <div class="brand">
-        <h1>MayilSilks Admin</h1>
-        <p>Manage sarees, photos, and store info</p>
+        <p class="brand-eyebrow">MayilSilks</p>
+        <h1 style="font-size:1.9rem;">Admin Dashboard</h1>
+        <p class="tagline">Manage sarees, photos, and store info</p>
       </div>
       <div style="display:flex; gap:10px;">
-        <a href="/" class="btn btn-outline" style="background:white;">View Site</a>
+        <a href="/" class="btn btn-outline">View Site</a>
         <a href="/admin/logout" class="btn btn-red">Log Out</a>
       </div>
     </div>
@@ -56,7 +57,7 @@
     <div class="panel">
       <h2>Current Collection (<%= products.length %>)</h2>
       <% if (products.length === 0) { %>
-        <p style="color:#6b7280;">No sarees added yet. Use the form above to add your first item.</p>
+        <p style="color:var(--muted);">No sarees added yet. Use the form above to add your first item.</p>
       <% } else { %>
         <table class="admin-table">
           <thead>
@@ -71,7 +72,7 @@
           <tbody>
             <% products.forEach(function(p) { %>
               <tr>
-                <td><img src="<%= p.image %>" alt="<%= p.name %>" /></td>
+                <td><img src="<%= p.image_url %>" alt="<%= p.name %>" /></td>
                 <td><%= p.name %></td>
                 <td><%= p.price %></td>
                 <td style="max-width:220px;"><%= p.description %></td>
@@ -97,7 +98,7 @@
         <div class="form-row">
           <div class="field">
             <label for="storeName">Store Name</label>
-            <input type="text" id="storeName" name="storeName" value="<%= settings.storeName %>" />
+            <input type="text" id="storeName" name="storeName" value="<%= settings.store_name %>" />
           </div>
           <div class="field">
             <label for="tagline">Tagline</label>
@@ -130,7 +131,7 @@
         </div>
         <div class="field">
           <label for="mapsUrl">Google Maps Link</label>
-          <input type="text" id="mapsUrl" name="mapsUrl" value="<%= settings.mapsUrl %>" />
+          <input type="text" id="mapsUrl" name="mapsUrl" value="<%= settings.maps_url %>" />
         </div>
         <div class="field">
           <label for="about">About Text</label>
