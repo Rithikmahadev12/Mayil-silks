@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Login | MayilSilks</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div class="login-wrap">
+    <div class="login-card">
+      <h1>MayilSilks Admin</h1>
+      <p class="sub">Sign in to manage sarees and store info</p>
+
+      <% if (error) { %>
+        <div class="alert alert-error"><%= error %></div>
+      <% } %>
+
+      <form method="POST" action="/admin/login">
+        <div class="field">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" required autofocus />
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" required />
+        </div>
+        <button type="submit" class="btn" style="width:100%;">Log In</button>
+      </form>
+
+      <a class="back-link" href="/">&larr; Back to store</a>
+    </div>
+  </div>
+</body>
+</html>

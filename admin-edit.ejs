@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Edit Saree | MayilSilks Admin</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand">
+        <h1>Edit Saree</h1>
+        <p><%= product.name %></p>
+      </div>
+      <a href="/admin" class="btn btn-outline" style="background:white;">&larr; Back to Dashboard</a>
+    </div>
+  </header>
+
+  <div class="admin-shell">
+    <div class="panel">
+      <img src="<%= product.image %>" alt="<%= product.name %>" style="width:160px; border-radius:12px; border:3px solid #d81c2c; margin-bottom:18px;" />
+
+      <form method="POST" action="/admin/products/<%= product.id %>" enctype="multipart/form-data">
+        <div class="form-row">
+          <div class="field">
+            <label for="name">Name *</label>
+            <input type="text" id="name" name="name" value="<%= product.name %>" required />
+          </div>
+          <div class="field">
+            <label for="price">Price</label>
+            <input type="text" id="price" name="price" value="<%= product.price %>" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="description">Description</label>
+          <textarea id="description" name="description"><%= product.description %></textarea>
+        </div>
+        <div class="field">
+          <label for="image">Replace Photo (optional)</label>
+          <input type="file" id="image" name="image" accept="image/*" />
+        </div>
+        <button type="submit" class="btn">Save Changes</button>
+        <a href="/admin" class="btn btn-outline">Cancel</a>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

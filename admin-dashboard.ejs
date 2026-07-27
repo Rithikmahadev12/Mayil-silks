@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard | MayilSilks</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand">
+        <h1>MayilSilks Admin</h1>
+        <p>Manage sarees, photos, and store info</p>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <a href="/" class="btn btn-outline" style="background:white;">View Site</a>
+        <a href="/admin/logout" class="btn btn-red">Log Out</a>
+      </div>
+    </div>
+  </header>
+
+  <div class="admin-shell">
+
+    <% if (message) { %><div class="alert alert-success"><%= message %></div><% } %>
+    <% if (error) { %><div class="alert alert-error"><%= error %></div><% } %>
+
+    <!-- Add new saree -->
+    <div class="panel">
+      <h2>Add New Saree / Item</h2>
+      <form method="POST" action="/admin/products" enctype="multipart/form-data">
+        <div class="form-row">
+          <div class="field">
+            <label for="name">Name *</label>
+            <input type="text" id="name" name="name" placeholder="e.g. Turquoise Silk Saree" required />
+          </div>
+          <div class="field">
+            <label for="price">Price</label>
+            <input type="text" id="price" name="price" placeholder="e.g. $89" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="description">Description</label>
+          <textarea id="description" name="description" placeholder="Fabric, color, occasion, etc."></textarea>
+        </div>
+        <div class="field">
+          <label for="image">Photo *</label>
+          <input type="file" id="image" name="image" accept="image/*" required />
+        </div>
+        <button type="submit" class="btn">Add Saree</button>
+      </form>
+    </div>
+
+    <!-- Existing products -->
+    <div class="panel">
+      <h2>Current Collection (<%= products.length %>)</h2>
+      <% if (products.length === 0) { %>
+        <p style="color:#6b7280;">No sarees added yet. Use the form above to add your first item.</p>
+      <% } else { %>
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Photo</th>
+              <th>Name</th>
+              <th>Price</th>
+              <th>Description</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% products.forEach(function(p) { %>
+              <tr>
+                <td><img src="<%= p.image %>" alt="<%= p.name %>" /></td>
+                <td><%= p.name %></td>
+                <td><%= p.price %></td>
+                <td style="max-width:220px;"><%= p.description %></td>
+                <td>
+                  <div class="row-actions">
+                    <a class="btn btn-outline btn-sm" href="/admin/products/<%= p.id %>/edit">Edit</a>
+                    <form method="POST" action="/admin/products/<%= p.id %>/delete" onsubmit="return confirm('Delete this saree?');">
+                      <button type="submit" class="btn btn-red btn-sm">Delete</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      <% } %>
+    </div>
+
+    <!-- Store settings -->
+    <div class="panel">
+      <h2>Store Info</h2>
+      <form method="POST" action="/admin/settings">
+        <div class="form-row">
+          <div class="field">
+            <label for="storeName">Store Name</label>
+            <input type="text" id="storeName" name="storeName" value="<%= settings.storeName %>" />
+          </div>
+          <div class="field">
+            <label for="tagline">Tagline</label>
+            <input type="text" id="tagline" name="tagline" value="<%= settings.tagline %>" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label for="status">Status</label>
+            <input type="text" id="status" name="status" placeholder="Open / Temporarily closed" value="<%= settings.status %>" />
+          </div>
+          <div class="field">
+            <label for="phone">Phone</label>
+            <input type="text" id="phone" name="phone" value="<%= settings.phone %>" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="address">Address</label>
+          <input type="text" id="address" name="address" value="<%= settings.address %>" />
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label for="website">Website</label>
+            <input type="text" id="website" name="website" value="<%= settings.website %>" />
+          </div>
+          <div class="field">
+            <label for="hours">Hours</label>
+            <input type="text" id="hours" name="hours" value="<%= settings.hours %>" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="mapsUrl">Google Maps Link</label>
+          <input type="text" id="mapsUrl" name="mapsUrl" value="<%= settings.mapsUrl %>" />
+        </div>
+        <div class="field">
+          <label for="about">About Text</label>
+          <textarea id="about" name="about"><%= settings.about %></textarea>
+        </div>
+        <button type="submit" class="btn">Save Store Info</button>
+      </form>
+    </div>
+
+  </div>
+</body>
+</html>
