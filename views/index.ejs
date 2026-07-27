@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title><%= settings.storeName %> | <%= settings.tagline %></title>
+  <title><%= settings.store_name %> | <%= settings.tagline %></title>
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
@@ -11,8 +11,9 @@
   <header class="site-header">
     <div class="header-inner">
       <div class="brand">
-        <h1><%= settings.storeName %></h1>
-        <p><%= settings.tagline %></p>
+        <p class="brand-eyebrow">Silks &amp; Sarees &middot; Portland, OR</p>
+        <h1><%= settings.store_name %></h1>
+        <p class="tagline"><%= settings.tagline %></p>
       </div>
       <% if (settings.status) { %>
         <span class="status-badge"><%= settings.status %></span>
@@ -20,84 +21,90 @@
     </div>
   </header>
 
-  <div class="info-bar">
-    <% if (settings.address) { %>
-      <div class="info-item">
-        <span class="info-icon">📍</span>
-        <div>
-          <strong>Address</strong>
-          <span><%= settings.address %></span>
-        </div>
-      </div>
-    <% } %>
-    <% if (settings.phone) { %>
-      <div class="info-item">
-        <span class="info-icon">📞</span>
-        <div>
-          <strong>Phone</strong>
-          <span><a href="tel:<%= settings.phone %>"><%= settings.phone %></a></span>
-        </div>
-      </div>
-    <% } %>
-    <% if (settings.website) { %>
-      <div class="info-item">
-        <span class="info-icon">🌐</span>
-        <div>
-          <strong>Website</strong>
-          <span><%= settings.website %></span>
-        </div>
-      </div>
-    <% } %>
-    <% if (settings.hours) { %>
-      <div class="info-item">
-        <span class="info-icon">🕒</span>
-        <div>
-          <strong>Hours</strong>
-          <span><%= settings.hours %></span>
-        </div>
-      </div>
-    <% } %>
-    <% if (settings.mapsUrl) { %>
-      <div class="info-item">
-        <span class="info-icon">🗺️</span>
-        <div>
-          <strong>Directions</strong>
-          <span><a href="<%= settings.mapsUrl %>" target="_blank" rel="noopener">Open in Google Maps</a></span>
-        </div>
-      </div>
-    <% } %>
-  </div>
+  <span class="temple-border"></span>
 
   <div class="container">
-    <% if (settings.about) { %>
-      <p style="max-width:700px; color:#374151; margin-bottom:36px;"><%= settings.about %></p>
-    <% } %>
-
-    <h2 class="section-title">Our Collection</h2>
-    <p class="section-sub">Sarees and clothing available in store</p>
-
-    <% if (products.length === 0) { %>
-      <div class="empty-state">
-        <p>New sarees coming soon! Check back shortly.</p>
-      </div>
-    <% } else { %>
-      <div class="grid">
-        <% products.forEach(function(p) { %>
-          <div class="card">
-            <img src="<%= p.image %>" alt="<%= p.name %>" loading="lazy" />
-            <div class="card-body">
-              <h3><%= p.name %></h3>
-              <% if (p.price) { %><p class="price"><%= p.price %></p><% } %>
-              <% if (p.description) { %><p class="desc"><%= p.description %></p><% } %>
-            </div>
+    <div class="info-bar">
+      <% if (settings.address) { %>
+        <div class="info-item">
+          <span class="info-icon">&#128205;</span>
+          <div>
+            <strong>Address</strong>
+            <span><%= settings.address %></span>
           </div>
-        <% }); %>
-      </div>
+        </div>
+      <% } %>
+      <% if (settings.phone) { %>
+        <div class="info-item">
+          <span class="info-icon">&#128222;</span>
+          <div>
+            <strong>Phone</strong>
+            <span><a href="tel:<%= settings.phone %>"><%= settings.phone %></a></span>
+          </div>
+        </div>
+      <% } %>
+      <% if (settings.website) { %>
+        <div class="info-item">
+          <span class="info-icon">&#127760;</span>
+          <div>
+            <strong>Website</strong>
+            <span><%= settings.website %></span>
+          </div>
+        </div>
+      <% } %>
+      <% if (settings.hours) { %>
+        <div class="info-item">
+          <span class="info-icon">&#128337;</span>
+          <div>
+            <strong>Hours</strong>
+            <span><%= settings.hours %></span>
+          </div>
+        </div>
+      <% } %>
+      <% if (settings.maps_url) { %>
+        <div class="info-item">
+          <span class="info-icon">&#128506;</span>
+          <div>
+            <strong>Directions</strong>
+            <span><a href="<%= settings.maps_url %>" target="_blank" rel="noopener">Open in Google Maps</a></span>
+          </div>
+        </div>
+      <% } %>
+    </div>
+
+    <% if (settings.about) { %>
+      <p style="max-width:700px; color:var(--muted); margin:36px 0 0;"><%= settings.about %></p>
     <% } %>
+
+    <div style="margin-top:48px;">
+      <h2 class="section-title">Our Collection</h2>
+      <p class="section-sub">Sarees and clothing available in store</p>
+
+      <% if (products.length === 0) { %>
+        <div class="empty-state">
+          <p>New sarees coming soon. Check back shortly.</p>
+        </div>
+      <% } else { %>
+        <div class="grid">
+          <% products.forEach(function(p) { %>
+            <div class="card">
+              <img src="<%= p.image_url %>" alt="<%= p.name %>" loading="lazy" />
+              <div class="card-body">
+                <h3><%= p.name %></h3>
+                <% if (p.price) { %><p class="price"><%= p.price %></p><% } %>
+                <% if (p.description) { %><p class="desc"><%= p.description %></p><% } %>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+      <% } %>
+    </div>
   </div>
 
+  <span class="temple-border red"></span>
+
   <footer class="site-footer">
-    <p>&copy; <%= new Date().getFullYear() %> <%= settings.storeName %>. All rights reserved. &middot; <a href="/admin/login">Admin</a></p>
+    <p>&copy; <%= new Date().getFullYear() %> <%= settings.store_name %>. All rights reserved. &middot; <a href="/admin/login">Admin</a></p>
   </footer>
 
 </body>
